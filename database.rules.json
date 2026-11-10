@@ -1,0 +1,48 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && ((!data.exists() && (newData.child('role').val() === 'patient' || (auth.token.email === 'pathanayeshaanjum2006@gmail.com' && auth.token.email_verified === true && newData.child('role').val() === 'admin'))) || (data.exists() && (newData.child('role').val() === data.child('role').val() || (auth.token.email === 'pathanayeshaanjum2006@gmail.com' && auth.token.email_verified === true && newData.child('role').val() === 'admin'))))))"
+      }
+    },
+    "doctorApplications": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && newData.child('status').val() === 'Pending' && (!data.exists() || data.child('status').val() === 'Pending' || data.child('status').val() === 'Rejected')))"
+      }
+    },
+    "doctors": {
+      ".indexOn": ["verificationStatus"],
+      ".read": "(query.orderByChild === 'verificationStatus' && query.equalTo === 'approved') || (auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin')",
+      "$doctorUid": {
+        ".read": "data.child('verificationStatus').val() === 'approved' || (auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $doctorUid && root.child('users').child(auth.uid).child('role').val() === 'doctor' && newData.child('userId').val() === auth.uid && data.exists() && data.child('verificationStatus').val() === 'approved' && newData.child('verificationStatus').val() === 'approved'))"
+      }
+    },
+    "bookedSlots": {
+      "$doctorUid": {
+        "$dateKey": {
+          "$slotKey": {
+            ".read": "auth != null && (!data.exists() || auth.uid === data.child('patientUid').val() || root.child('users').child(auth.uid).child('role').val() === 'admin' || (root.child('users').child(auth.uid).child('role').val() === 'doctor' && auth.uid === $doctorUid))",
+            ".write": "auth != null && ((!data.exists() && newData.child('appointmentId').isString() && newData.child('patientUid').val() === auth.uid && (root.child('users').child(auth.uid).child('role').val() === 'patient' || root.child('users').child(auth.uid).child('role').val() === 'admin') && root.child('doctors').child($doctorUid).child('verificationStatus').val() === 'approved' && root.child('doctors').child($doctorUid).child('acceptingAppointments').val() === true && root.child('doctors').child($doctorUid).child('slotAvailability').child($slotKey).val() === true) || (data.exists() && newData.val() === null && (auth.uid === data.child('patientUid').val() || root.child('users').child(auth.uid).child('role').val() === 'admin' || (root.child('users').child(auth.uid).child('role').val() === 'doctor' && auth.uid === $doctorUid)) && (!root.child('appointments').child(data.child('appointmentId').val()).exists() || root.child('appointments').child(data.child('appointmentId').val()).child('status').val() === 'Cancelled')))"
+          }
+        }
+      }
+    },
+    "appointments": {
+      ".indexOn": ["patientUid", "doctorUid"],
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild === 'patientUid' && query.equalTo === auth.uid) || (query.orderByChild === 'doctorUid' && query.equalTo === auth.uid))",
+      "$appointmentId": {
+        ".write": "auth != null && !data.exists() && (root.child('users').child(auth.uid).child('role').val() === 'patient' || root.child('users').child(auth.uid).child('role').val() === 'admin') && newData.child('patientUid').val() === auth.uid && newData.child('dateKey').isString() && newData.child('slotKey').isString() && newData.child('status').val() === 'Pending' && root.child('doctors').child(newData.child('doctorId').val()).child('userId').val() === newData.child('doctorUid').val() && root.child('doctors').child(newData.child('doctorId').val()).child('verificationStatus').val() === 'approved' && root.child('doctors').child(newData.child('doctorId').val()).child('acceptingAppointments').val() === true && root.child('doctors').child(newData.child('doctorId').val()).child('slotAvailability').child(newData.child('slotKey').val()).val() === true && root.child('bookedSlots').child(newData.child('doctorUid').val()).child(newData.child('dateKey').val()).child(newData.child('slotKey').val()).child('appointmentId').val() === $appointmentId && root.child('bookedSlots').child(newData.child('doctorUid').val()).child(newData.child('dateKey').val()).child(newData.child('slotKey').val()).child('patientUid').val() === auth.uid",
+        "status": {
+          ".write": "auth != null && newData.isString() && (newData.val() === 'Pending' || newData.val() === 'Confirmed' || newData.val() === 'Cancelled' || newData.val() === 'Completed') && ((root.child('users').child(auth.uid).child('role').val() === 'admin') || (root.child('users').child(auth.uid).child('role').val() === 'patient' && root.child('appointments').child($appointmentId).child('patientUid').val() === auth.uid && (data.val() === 'Pending' || data.val() === 'Confirmed') && newData.val() === 'Cancelled') || (root.child('users').child(auth.uid).child('role').val() === 'doctor' && root.child('appointments').child($appointmentId).child('doctorUid').val() === auth.uid && ((data.val() === 'Pending' && (newData.val() === 'Confirmed' || newData.val() === 'Cancelled')) || (data.val() === 'Confirmed' && newData.val() === 'Completed'))))"
+        }
+      }
+    }
+  }
+}
